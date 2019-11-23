@@ -33,11 +33,12 @@ namespace aes {
 	static_assert(getRoundCount(32, 24) == 14);
 	static_assert(getRoundCount(32, 32) == 14);
 
-	inline uint8_t gfAddition(uint8_t _lhs, uint8_t _rhs) {
+	constexpr inline uint8_t gfAddition(uint8_t _lhs, uint8_t _rhs) {
 		return _lhs ^ _rhs;
 	}
+	static_assert(gfAddition(0x57, 0x83) == 0xd4);
 
-	inline uint8_t gfMultiplication(uint8_t _lhs, uint8_t _rhs) {
+	constexpr inline uint8_t gfMultiplication(uint8_t _lhs, uint8_t _rhs) {
 		uint16_t temp = 0;
 		uint8_t index = 8;
 		while (index-- > 0) {
@@ -55,6 +56,16 @@ namespace aes {
 		}
 		return static_cast<uint8_t>(temp);
 	}
+	static_assert(gfMultiplication(0x57, 0x83) == 0xc1);
+	static_assert(gfMultiplication(0x57, 0x13) == 0xfe);
+	static_assert(gfMultiplication(0x57, 0x02) == 0xae);
+	static_assert(gfMultiplication(0x57, 0x04) == 0x47);
+	static_assert(gfMultiplication(0xae, 0x02) == 0x47);
+	static_assert(gfMultiplication(0x57, 0x08) == 0x8e);
+	static_assert(gfMultiplication(0x47, 0x02) == 0x8e);
+	static_assert(gfMultiplication(0x57, 0x10) == 0x07);
+	static_assert(gfMultiplication(0x8e, 0x02) == 0x07);
+	static_assert(gfMultiplication(0x57, gfAddition(gfAddition(0x01, 0x02), 0x10)) == gfMultiplication(0x57, 0x13));
 
 	inline PolynomialWord gfAddition(PolynomialWord _lhs, PolynomialWord _rhs) {
 		return PolynomialWord{
