@@ -5,13 +5,13 @@
 #include <string>
 #include <array>
 
-typedef std::array<uint8_t, 128> BlockType;
-
-typedef std::array<uint8_t, 128> Key128Type;
-typedef std::array<uint8_t, 192> Key192Type;
-typedef std::array<uint8_t, 256> Key256Type;
-
 namespace aes {
+	typedef std::array<uint8_t, 128> BlockType;
+
+	typedef std::array<uint8_t, 128> Key128Type;
+	typedef std::array<uint8_t, 192> Key192Type;
+	typedef std::array<uint8_t, 256> Key256Type;
+
 	BlockType encrypt(BlockType block, Key128Type key);
 	BlockType encrypt(BlockType block, Key192Type key);
 	BlockType encrypt(BlockType block, Key256Type key);
