@@ -20,6 +20,29 @@ namespace aes {
 		0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16
 	};
 
+	inline uint8_t gf_addition(uint8_t lhs, uint8_t rhs) {
+		return lhs ^ rhs;
+	}
+
+	inline uint8_t gf_multiplication(uint8_t lhs, uint8_t rhs) {
+		uint16_t temp = 0;
+		uint8_t index = 8;
+		while (index-- > 0) {
+			uint8_t mask = 1 << index;
+			if (rhs & mask) {
+				temp ^= (lhs << index);
+			}
+		}
+		index = 16;
+		while (index-- > 8) {
+			uint16_t mask = 1 << index;
+			if (temp & mask) {
+				temp ^= (0x11b << (index - 8));
+			}
+		}
+		return static_cast<uint8_t>(temp);
+	}
+
 	BlockType encrypt(BlockType block, Key128Type key) {
 		return BlockType{};
 	}
