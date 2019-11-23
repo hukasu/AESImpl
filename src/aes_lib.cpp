@@ -1,4 +1,4 @@
-#include "aes_lib.hpp"
+﻿#include "aes_lib.hpp"
 
 namespace aes {
 	std::array<uint8_t, 0x100> rijndael_substitution_box = {
@@ -41,6 +41,83 @@ namespace aes {
 			}
 		}
 		return static_cast<uint8_t>(temp);
+	}
+
+	inline uint8_t gf_addition(uint8_t lhs, uint8_t rhs) {
+		return lhs ^ rhs;
+	}
+
+	inline uint8_t gf_multiplication(uint8_t lhs, uint8_t rhs) {
+		uint16_t temp = 0;
+		uint8_t index = 8;
+		while (index-- > 0) {
+			uint8_t mask = 1 << index;
+			if (rhs & mask) {
+				temp ^= (lhs << index);
+			}
+		}
+		index = 16;
+		while (index-- > 8) {
+			uint16_t mask = 1 << index;
+			if (temp & mask) {
+				temp ^= (0x11b << (index - 8));
+			}
+		}
+		return static_cast<uint8_t>(temp);
+	}
+
+	inline PolynomialWord gf_addition(PolynomialWord lhs, PolynomialWord rhs) {
+		return PolynomialWord{
+			static_cast<uint8_t>(lhs[0] ^ rhs[0]),
+			static_cast<uint8_t>(lhs[1] ^ rhs[1]),
+			static_cast<uint8_t>(lhs[2] ^ rhs[2]),
+			static_cast<uint8_t>(lhs[3] ^ rhs[3]),
+		};
+	}
+
+	inline PolynomialWord gf_multiplication(PolynomialWord lhs, PolynomialWord rhs) {
+		return PolynomialWord{
+			gf_addition(
+				gf_addition(
+					gf_multiplication(lhs[0], rhs[0]),
+					gf_multiplication(lhs[3], rhs[1])
+				),
+				gf_addition(
+					gf_multiplication(lhs[2], rhs[2]),
+					gf_multiplication(lhs[1], rhs[3])
+				)
+			),
+			gf_addition(
+				gf_addition(
+					gf_multiplication(lhs[1], rhs[0]),
+					gf_multiplication(lhs[0], rhs[1])
+				),
+				gf_addition(
+					gf_multiplication(lhs[3], rhs[2]),
+					gf_multiplication(lhs[2], rhs[3])
+				)
+			),
+			gf_addition(
+				gf_addition(
+					gf_multiplication(lhs[2], rhs[0]),
+					gf_multiplication(lhs[1], rhs[1])
+				),
+				gf_addition(
+					gf_multiplication(lhs[0], rhs[2]),
+					gf_multiplication(lhs[3], rhs[3])
+				)
+			),
+			gf_addition(
+				gf_addition(
+					gf_multiplication(lhs[3], rhs[0]),
+					gf_multiplication(lhs[2], rhs[1])
+				),
+				gf_addition(
+					gf_multiplication(lhs[1], rhs[2]),
+					gf_multiplication(lhs[0], rhs[3])
+				)
+			)
+		};
 	}
 
 	BlockType encrypt(BlockType block, Key128Type key) {
