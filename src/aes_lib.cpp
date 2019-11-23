@@ -20,17 +20,17 @@ namespace aes {
 		0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16
 	};
 
-	inline uint8_t gf_addition(uint8_t lhs, uint8_t rhs) {
-		return lhs ^ rhs;
+	inline uint8_t gfAddition(uint8_t _lhs, uint8_t _rhs) {
+		return _lhs ^ _rhs;
 	}
 
-	inline uint8_t gf_multiplication(uint8_t lhs, uint8_t rhs) {
+	inline uint8_t gfMultiplication(uint8_t _lhs, uint8_t _rhs) {
 		uint16_t temp = 0;
 		uint8_t index = 8;
 		while (index-- > 0) {
 			uint8_t mask = 1 << index;
-			if (rhs & mask) {
-				temp ^= (lhs << index);
+			if (_rhs & mask) {
+				temp ^= (_lhs << index);
 			}
 		}
 		index = 16;
@@ -43,55 +43,55 @@ namespace aes {
 		return static_cast<uint8_t>(temp);
 	}
 
-	inline PolynomialWord gf_addition(PolynomialWord lhs, PolynomialWord rhs) {
+	inline PolynomialWord gfAddition(PolynomialWord _lhs, PolynomialWord _rhs) {
 		return PolynomialWord{
-			static_cast<uint8_t>(lhs[0] ^ rhs[0]),
-			static_cast<uint8_t>(lhs[1] ^ rhs[1]),
-			static_cast<uint8_t>(lhs[2] ^ rhs[2]),
-			static_cast<uint8_t>(lhs[3] ^ rhs[3]),
+			gfAddition(_lhs[0], _rhs[0]),
+			gfAddition(_lhs[1], _rhs[1]),
+			gfAddition(_lhs[2], _rhs[2]),
+			gfAddition(_lhs[3], _rhs[3]),
 		};
 	}
 
-	inline PolynomialWord gf_multiplication(PolynomialWord lhs, PolynomialWord rhs) {
+	inline PolynomialWord gfMultiplication(PolynomialWord _lhs, PolynomialWord _rhs) {
 		return PolynomialWord{
-			gf_addition(
-				gf_addition(
-					gf_multiplication(lhs[0], rhs[0]),
-					gf_multiplication(lhs[3], rhs[1])
+			gfAddition(
+				gfAddition(
+					gfMultiplication(_lhs[0], _rhs[0]),
+					gfMultiplication(_lhs[3], _rhs[1])
 				),
-				gf_addition(
-					gf_multiplication(lhs[2], rhs[2]),
-					gf_multiplication(lhs[1], rhs[3])
+				gfAddition(
+					gfMultiplication(_lhs[2], _rhs[2]),
+					gfMultiplication(_lhs[1], _rhs[3])
 				)
 			),
-			gf_addition(
-				gf_addition(
-					gf_multiplication(lhs[1], rhs[0]),
-					gf_multiplication(lhs[0], rhs[1])
+			gfAddition(
+				gfAddition(
+					gfMultiplication(_lhs[1], _rhs[0]),
+					gfMultiplication(_lhs[0], _rhs[1])
 				),
-				gf_addition(
-					gf_multiplication(lhs[3], rhs[2]),
-					gf_multiplication(lhs[2], rhs[3])
+				gfAddition(
+					gfMultiplication(_lhs[3], _rhs[2]),
+					gfMultiplication(_lhs[2], _rhs[3])
 				)
 			),
-			gf_addition(
-				gf_addition(
-					gf_multiplication(lhs[2], rhs[0]),
-					gf_multiplication(lhs[1], rhs[1])
+			gfAddition(
+				gfAddition(
+					gfMultiplication(_lhs[2], _rhs[0]),
+					gfMultiplication(_lhs[1], _rhs[1])
 				),
-				gf_addition(
-					gf_multiplication(lhs[0], rhs[2]),
-					gf_multiplication(lhs[3], rhs[3])
+				gfAddition(
+					gfMultiplication(_lhs[0], _rhs[2]),
+					gfMultiplication(_lhs[3], _rhs[3])
 				)
 			),
-			gf_addition(
-				gf_addition(
-					gf_multiplication(lhs[3], rhs[0]),
-					gf_multiplication(lhs[2], rhs[1])
+			gfAddition(
+				gfAddition(
+					gfMultiplication(_lhs[3], _rhs[0]),
+					gfMultiplication(_lhs[2], _rhs[1])
 				),
-				gf_addition(
-					gf_multiplication(lhs[1], rhs[2]),
-					gf_multiplication(lhs[0], rhs[3])
+				gfAddition(
+					gfMultiplication(_lhs[1], _rhs[2]),
+					gfMultiplication(_lhs[0], _rhs[3])
 				)
 			)
 		};
@@ -122,27 +122,27 @@ namespace aes {
 		addRoundKey(_block, _key);
 	}
 
-	BlockType encrypt(BlockType block, Key128Type key) {
+	BlockType encrypt(BlockType* _block, Key128Type* _key) {
 		return BlockType{};
 	}
 
-	BlockType encrypt(BlockType block, Key192Type key) {
+	BlockType encrypt(BlockType* _block, Key192Type* _key) {
 		return BlockType{};
 	}
 
-	BlockType encrypt(BlockType block, Key256Type key) {
+	BlockType encrypt(BlockType* _block, Key256Type* _key) {
 		return BlockType{};
 	}
 
-	BlockType decrypt(BlockType block, Key128Type key) {
+	BlockType decrypt(BlockType* _block, Key128Type* _key) {
 		return BlockType{};
 	}
 
-	BlockType decrypt(BlockType block, Key192Type key) {
+	BlockType decrypt(BlockType* _block, Key192Type* _key) {
 		return BlockType{};
 	}
 
-	BlockType decrypt(BlockType block, Key256Type key) {
+	BlockType decrypt(BlockType* _block, Key256Type* _key) {
 		return BlockType{};
 	}
 }

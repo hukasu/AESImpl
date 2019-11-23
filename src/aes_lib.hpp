@@ -13,13 +13,13 @@ namespace aes {
 	typedef std::array<uint8_t, 192> Key192Type;
 	typedef std::array<uint8_t, 256> Key256Type;
 
-	BlockType encrypt(BlockType block, Key128Type key);
-	BlockType encrypt(BlockType block, Key192Type key);
-	BlockType encrypt(BlockType block, Key256Type key);
+	BlockType encrypt(BlockType* _block, Key128Type* _key);
+	BlockType encrypt(BlockType* _block, Key192Type* _key);
+	BlockType encrypt(BlockType* _block, Key256Type* _key);
 
-	BlockType decrypt(BlockType block, Key128Type key);
-	BlockType decrypt(BlockType block, Key192Type key);
-	BlockType decrypt(BlockType block, Key256Type key);
+	BlockType decrypt(BlockType* _block, Key128Type* _key);
+	BlockType decrypt(BlockType* _block, Key192Type* _key);
+	BlockType decrypt(BlockType* _block, Key256Type* _key);
 }
 
 #endif // __AES__LIB__HPP__
