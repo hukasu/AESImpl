@@ -20,6 +20,19 @@ namespace aes {
 		0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16
 	};
 
+	constexpr uint8_t getRoundCount(uint8_t block_size, uint8_t key_size) {
+		return block_size == 16 ? (key_size == 16 ? 10 : (key_size == 24 ? 12 : 14)) : (block_size == 24 ? (key_size == 32 ? 14 : 12) : 14);
+	}
+	static_assert(getRoundCount(16, 16) == 10);
+	static_assert(getRoundCount(16, 24) == 12);
+	static_assert(getRoundCount(16, 32) == 14);
+	static_assert(getRoundCount(24, 16) == 12);
+	static_assert(getRoundCount(24, 24) == 12);
+	static_assert(getRoundCount(24, 32) == 14);
+	static_assert(getRoundCount(32, 16) == 14);
+	static_assert(getRoundCount(32, 24) == 14);
+	static_assert(getRoundCount(32, 32) == 14);
+
 	inline uint8_t gfAddition(uint8_t _lhs, uint8_t _rhs) {
 		return _lhs ^ _rhs;
 	}
@@ -204,7 +217,9 @@ namespace aes {
 		std::array<uint8_t, block_size>* _block,
 		std::array<uint8_t, key_size>* _key
 	) {
-		for (uint8_t i = 0; i < 9; i++) {
+		constexpr uint8_t rounds = getRoundCount(block_size, key_size);
+
+		for (uint8_t i = 0; i < (rounds - 1); i++) {
 			round(_block, _key);
 		}
 		round(_block, _key, true);
