@@ -166,9 +166,11 @@ namespace aes {
 		}
 	}
 
-	template<uint8_t block_size, uint8_t key_size>
-	void addRoundKey(std::array<uint8_t, block_size>* _block, std::array<uint8_t, key_size>* _key) {
-
+	template<uint8_t block_size>
+	void addRoundKey(std::array<uint8_t, block_size>* _block, std::array<uint8_t, block_size>* _key) {
+		for (uint8_t i = 0; i < block_size; i++) {
+			_block[i] ^= _key[i];
+		}
 	}
 
 	template<uint8_t block_size, uint8_t key_size>
@@ -176,11 +178,11 @@ namespace aes {
 		byteSubstitution(_block);
 		shiftRows(_block);
 		if (!final_round) mixColumns(_block);
-		addRoundKey(_block, _key);
+		addRoundKey(_block, _block);
 	}
 
-	template<uint8_t block_size, uint8_t key_size>
-	void keyExpansion() {
+	template<uint8_t key_size, uint32_t expanded_key_size>
+	std::array<uint8_t, expanded_key_size> keyExpansion(std::array<uint8_t, key_size> _key) {
 
 	}
 
@@ -191,6 +193,7 @@ namespace aes {
 	) {
 		constexpr uint8_t rounds = getRoundCount(block_size, key_size);
 
+		addRoundKey(_block, _block);
 		for (uint8_t i = 0; i < (rounds - 1); i++) {
 			round(_block, _key);
 		}
