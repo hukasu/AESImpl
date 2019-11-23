@@ -43,29 +43,6 @@ namespace aes {
 		return static_cast<uint8_t>(temp);
 	}
 
-	inline uint8_t gf_addition(uint8_t lhs, uint8_t rhs) {
-		return lhs ^ rhs;
-	}
-
-	inline uint8_t gf_multiplication(uint8_t lhs, uint8_t rhs) {
-		uint16_t temp = 0;
-		uint8_t index = 8;
-		while (index-- > 0) {
-			uint8_t mask = 1 << index;
-			if (rhs & mask) {
-				temp ^= (lhs << index);
-			}
-		}
-		index = 16;
-		while (index-- > 8) {
-			uint16_t mask = 1 << index;
-			if (temp & mask) {
-				temp ^= (0x11b << (index - 8));
-			}
-		}
-		return static_cast<uint8_t>(temp);
-	}
-
 	inline PolynomialWord gf_addition(PolynomialWord lhs, PolynomialWord rhs) {
 		return PolynomialWord{
 			static_cast<uint8_t>(lhs[0] ^ rhs[0]),
