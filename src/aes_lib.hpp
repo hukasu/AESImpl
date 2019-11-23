@@ -6,6 +6,7 @@
 #include <array>
 
 namespace aes {
+	typedef std::array<uint8_t, 4> PolynomialWord;
 	typedef std::array<uint8_t, 128> BlockType;
 
 	typedef std::array<uint8_t, 128> Key128Type;
