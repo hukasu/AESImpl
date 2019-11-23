@@ -97,6 +97,31 @@ namespace aes {
 		};
 	}
 
+	void byteSubstitution(BlockType* _block) {
+
+	}
+
+	void shiftRows(BlockType* _block) {
+
+	}
+
+	void mixCollumn(BlockType* _block) {
+
+	}
+
+	template<int key_size>
+	void addRoundKey(BlockType* _block, std::array<uint8_t, key_size>* _key) {
+
+	}
+
+	template<int key_size>
+	void round(BlockType* _block, std::array<uint8_t, key_size>* _key, bool final_round = false) {
+		byteSubstitution(_block);
+		shiftRows(_block);
+		if (!final_round) mixCollumn(_block);
+		addRoundKey(_block, _key);
+	}
+
 	BlockType encrypt(BlockType block, Key128Type key) {
 		return BlockType{};
 	}
