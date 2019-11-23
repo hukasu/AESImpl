@@ -98,15 +98,87 @@ namespace aes {
 	}
 
 	void byteSubstitution(BlockType* _block) {
-
+		for (uint8_t i = 0; i < 128; i++) {
+			(*_block)[i] = rijndael_substitution_box[(*_block)[i]];
+		}
 	}
 
 	void shiftRows(BlockType* _block) {
-
+		// Row 0 does nothing
+		// Row 1 shift by 1
+		std::swap((*_block)[1], (*_block)[5]);
+		std::swap((*_block)[5], (*_block)[9]);
+		std::swap((*_block)[9], (*_block)[13]);
+		// Row 2 shift by 2
+		std::swap((*_block)[2], (*_block)[10]);
+		std::swap((*_block)[6], (*_block)[14]);
+		// Row 3 shift by 3
+		std::swap((*_block)[15], (*_block)[11]);
+		std::swap((*_block)[11], (*_block)[7]);
+		std::swap((*_block)[7], (*_block)[3]);
 	}
 
 	void mixCollumn(BlockType* _block) {
-
+		PolynomialWord cx = {
+			0x03, 0x01, 0x01, 0x02
+		};
+		PolynomialWord temp;
+		// Collumn 0
+		temp = gfMultiplication(
+			PolynomialWord{
+				(*_block)[0],
+				(*_block)[1],
+				(*_block)[2],
+				(*_block)[3]
+			},
+			cx
+		);
+		(*_block)[0] = temp[0];
+		(*_block)[1] = temp[1];
+		(*_block)[2] = temp[2];
+		(*_block)[3] = temp[3];
+		// Collumn 1
+		temp = gfMultiplication(
+			PolynomialWord{
+				(*_block)[4],
+				(*_block)[5],
+				(*_block)[6],
+				(*_block)[7]
+			},
+			cx
+		);
+		(*_block)[4] = temp[0];
+		(*_block)[5] = temp[1];
+		(*_block)[6] = temp[2];
+		(*_block)[7] = temp[3];
+		// Collumn 2
+		temp = gfMultiplication(
+			PolynomialWord{
+				(*_block)[8],
+				(*_block)[9],
+				(*_block)[10],
+				(*_block)[11]
+			},
+			cx
+		);
+		(*_block)[8] = temp[0];
+		(*_block)[9] = temp[1];
+		(*_block)[10] = temp[2];
+		(*_block)[11] = temp[3];
+		// Collumn 3
+		temp = gfMultiplication(
+			PolynomialWord{
+				(*_block)[12],
+				(*_block)[13],
+				(*_block)[14],
+				(*_block)[15]
+			},
+			cx
+		);
+		(*_block)[12] = temp[0];
+		(*_block)[13] = temp[1];
+		(*_block)[14] = temp[2];
+		(*_block)[15] = temp[3];
 	}
 
 	template<int key_size>
@@ -122,15 +194,32 @@ namespace aes {
 		addRoundKey(_block, _key);
 	}
 
+	template<int key_size>
+	void keyExpansion() {
+
+	}
+
 	BlockType encrypt(BlockType* _block, Key128Type* _key) {
+		for (uint8_t i = 0; i < 9; i++) {
+			round(_block, _key);
+		}
+		round(_block, _key, true);
 		return BlockType{};
 	}
 
 	BlockType encrypt(BlockType* _block, Key192Type* _key) {
+		for (uint8_t i = 0; i < 11; i++) {
+			round(_block, _key);
+		}
+		round(_block, _key, true);
 		return BlockType{};
 	}
 
 	BlockType encrypt(BlockType* _block, Key256Type* _key) {
+		for (uint8_t i = 0; i < 13; i++) {
+			round(_block, _key);
+		}
+		round(_block, _key, true);
 		return BlockType{};
 	}
 
