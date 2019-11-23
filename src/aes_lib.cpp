@@ -110,12 +110,14 @@ namespace aes {
 		};
 	}
 
-	void byteSubstitution(BlockType* _block) {
+	template<uint8_t block_size>
+	void byteSubstitution(std::array<uint8_t, block_size>* _block) {
 		for (uint8_t i = 0; i < 128; i++) {
 			(*_block)[i] = rijndael_substitution_box[(*_block)[i]];
 		}
 	}
 
+	template<uint8_t block_size>
 	void shiftRows(BlockType* _block) {
 		// Row 0 does nothing
 		// Row 1 shift by 1
@@ -131,7 +133,8 @@ namespace aes {
 		std::swap((*_block)[7], (*_block)[3]);
 	}
 
-	void mixCollumn(BlockType* _block) {
+	template<uint8_t block_size>
+	void mixCollumn(std::array<uint8_t, block_size>* _block) {
 		PolynomialWord cx = {
 			0x03, 0x01, 0x01, 0x02
 		};
@@ -194,25 +197,25 @@ namespace aes {
 		(*_block)[15] = temp[3];
 	}
 
-	template<int key_size>
-	void addRoundKey(BlockType* _block, std::array<uint8_t, key_size>* _key) {
+	template<uint8_t block_size, uint8_t key_size>
+	void addRoundKey(std::array<uint8_t, block_size>* _block, std::array<uint8_t, key_size>* _key) {
 
 	}
 
-	template<int key_size>
-	void round(BlockType* _block, std::array<uint8_t, key_size>* _key, bool final_round = false) {
+	template<uint8_t block_size, uint8_t key_size>
+	void round(std::array<uint8_t, block_size>* _block, std::array<uint8_t, key_size>* _key, bool final_round = false) {
 		byteSubstitution(_block);
 		shiftRows(_block);
 		if (!final_round) mixCollumn(_block);
 		addRoundKey(_block, _key);
 	}
 
-	template<int key_size>
+	template<uint8_t block_size, uint8_t key_size>
 	void keyExpansion() {
 
 	}
 
-	template<int block_size, int key_size>
+	template<uint8_t block_size, uint8_t key_size>
 	inline std::array<uint8_t, block_size> _encrypt(
 		std::array<uint8_t, block_size>* _block,
 		std::array<uint8_t, key_size>* _key
@@ -238,7 +241,7 @@ namespace aes {
 		return _encrypt(_block, _key);
 	}
 
-	template<int block_size, int key_size>
+	template<uint8_t block_size, uint8_t key_size>
 	inline std::array<uint8_t, block_size> _decrypt(
 		std::array<uint8_t, block_size>* _block,
 		std::array<uint8_t, key_size>* _key
