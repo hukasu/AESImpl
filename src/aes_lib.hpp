@@ -7,11 +7,11 @@
 
 namespace aes {
 	typedef std::array<uint8_t, 4> PolynomialWord;
-	typedef std::array<uint8_t, 128> BlockType;
+	typedef std::array<uint8_t, 16> BlockType;
 
-	typedef std::array<uint8_t, 128> Key128Type;
-	typedef std::array<uint8_t, 192> Key192Type;
-	typedef std::array<uint8_t, 256> Key256Type;
+	typedef std::array<uint8_t, 16> Key128Type;
+	typedef std::array<uint8_t, 24> Key192Type;
+	typedef std::array<uint8_t, 32> Key256Type;
 
 	BlockType encrypt(BlockType* _block, Key128Type* _key);
 	BlockType encrypt(BlockType* _block, Key192Type* _key);
