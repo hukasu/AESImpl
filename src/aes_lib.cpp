@@ -199,7 +199,11 @@ namespace aes {
 
 	}
 
-	BlockType encrypt(BlockType* _block, Key128Type* _key) {
+	template<int block_size, int key_size>
+	inline std::array<uint8_t, block_size> _encrypt(
+		std::array<uint8_t, block_size>* _block,
+		std::array<uint8_t, key_size>* _key
+	) {
 		for (uint8_t i = 0; i < 9; i++) {
 			round(_block, _key);
 		}
@@ -207,31 +211,35 @@ namespace aes {
 		return BlockType{};
 	}
 
+	BlockType encrypt(BlockType* _block, Key128Type* _key) {
+		return _encrypt(_block, _key);
+	}
+
 	BlockType encrypt(BlockType* _block, Key192Type* _key) {
-		for (uint8_t i = 0; i < 11; i++) {
-			round(_block, _key);
-		}
-		round(_block, _key, true);
-		return BlockType{};
+		return _encrypt(_block, _key);
 	}
 
 	BlockType encrypt(BlockType* _block, Key256Type* _key) {
-		for (uint8_t i = 0; i < 13; i++) {
-			round(_block, _key);
-		}
-		round(_block, _key, true);
+		return _encrypt(_block, _key);
+	}
+
+	template<int block_size, int key_size>
+	inline std::array<uint8_t, block_size> _decrypt(
+		std::array<uint8_t, block_size>* _block,
+		std::array<uint8_t, key_size>* _key
+	) {
 		return BlockType{};
 	}
 
 	BlockType decrypt(BlockType* _block, Key128Type* _key) {
-		return BlockType{};
+		return _decrypt(_block, _key);
 	}
 
 	BlockType decrypt(BlockType* _block, Key192Type* _key) {
-		return BlockType{};
+		return _decrypt(_block, _key);
 	}
 
 	BlockType decrypt(BlockType* _block, Key256Type* _key) {
-		return BlockType{};
+		return _decrypt(_block, _key);
 	}
 }
