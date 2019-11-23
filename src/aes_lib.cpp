@@ -129,7 +129,7 @@ namespace aes {
 	}
 
 	template<uint8_t block_size>
-	void shiftRows(BlockType* _block) {
+	void shiftRows(std::array<uint8_t, block_size>* _block) {
 		// Row 0 does nothing
 		// Row 1 shift by 1
 		std::swap((*_block)[1], (*_block)[5]);
@@ -145,67 +145,25 @@ namespace aes {
 	}
 
 	template<uint8_t block_size>
-	void mixCollumn(std::array<uint8_t, block_size>* _block) {
+	void mixColumns(std::array<uint8_t, block_size>* _block) {
 		PolynomialWord cx = {
 			0x03, 0x01, 0x01, 0x02
 		};
-		PolynomialWord temp;
-		// Collumn 0
-		temp = gfMultiplication(
-			PolynomialWord{
-				(*_block)[0],
-				(*_block)[1],
-				(*_block)[2],
-				(*_block)[3]
-			},
-			cx
-		);
-		(*_block)[0] = temp[0];
-		(*_block)[1] = temp[1];
-		(*_block)[2] = temp[2];
-		(*_block)[3] = temp[3];
-		// Collumn 1
-		temp = gfMultiplication(
-			PolynomialWord{
-				(*_block)[4],
-				(*_block)[5],
-				(*_block)[6],
-				(*_block)[7]
-			},
-			cx
-		);
-		(*_block)[4] = temp[0];
-		(*_block)[5] = temp[1];
-		(*_block)[6] = temp[2];
-		(*_block)[7] = temp[3];
-		// Collumn 2
-		temp = gfMultiplication(
-			PolynomialWord{
-				(*_block)[8],
-				(*_block)[9],
-				(*_block)[10],
-				(*_block)[11]
-			},
-			cx
-		);
-		(*_block)[8] = temp[0];
-		(*_block)[9] = temp[1];
-		(*_block)[10] = temp[2];
-		(*_block)[11] = temp[3];
-		// Collumn 3
-		temp = gfMultiplication(
-			PolynomialWord{
-				(*_block)[12],
-				(*_block)[13],
-				(*_block)[14],
-				(*_block)[15]
-			},
-			cx
-		);
-		(*_block)[12] = temp[0];
-		(*_block)[13] = temp[1];
-		(*_block)[14] = temp[2];
-		(*_block)[15] = temp[3];
+		for (uint8_t i = 0; i < (block_size / 4); i++) {
+			PolynomialWord temp = gfMultiplication(
+				cx,
+				PolynomialWord{
+					(*_block)[i + 0],
+					(*_block)[i + 1],
+					(*_block)[i + 2],
+					(*_block)[i + 3]
+				}
+			);
+			(*_block)[i + 0] = temp[0];
+			(*_block)[i + 1] = temp[1];
+			(*_block)[i + 2] = temp[2];
+			(*_block)[i + 3] = temp[3];
+		}
 	}
 
 	template<uint8_t block_size, uint8_t key_size>
@@ -217,7 +175,7 @@ namespace aes {
 	void round(std::array<uint8_t, block_size>* _block, std::array<uint8_t, key_size>* _key, bool final_round = false) {
 		byteSubstitution(_block);
 		shiftRows(_block);
-		if (!final_round) mixCollumn(_block);
+		if (!final_round) mixColumns(_block);
 		addRoundKey(_block, _key);
 	}
 
