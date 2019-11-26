@@ -149,7 +149,7 @@ namespace aes {
 		PolynomialWord cx = {
 			0x03, 0x01, 0x01, 0x02
 		};
-		for (uint8_t i = 0; i < (block_size / 4); i++) {
+		for (uint64_t i = 0; i < (block_size / 4); i++) {
 			PolynomialWord temp = gfMultiplication(
 				cx,
 				PolynomialWord{
@@ -169,7 +169,7 @@ namespace aes {
 	template<uint8_t block_size>
 	void addRoundKey(std::array<uint8_t, block_size>* _block, std::array<uint8_t, block_size>* _key) {
 		for (uint8_t i = 0; i < block_size; i++) {
-			_block[i] ^= _key[i];
+			(*_block)[i] = gfAddition((*_block)[i], (*_key)[i]);
 		}
 	}
 
@@ -181,9 +181,59 @@ namespace aes {
 		addRoundKey(_block, _block);
 	}
 
-	template<uint8_t key_size, uint32_t expanded_key_size>
-	std::array<uint8_t, expanded_key_size> keyExpansion(std::array<uint8_t, key_size> _key) {
+	PolynomialWord substituteWord(PolynomialWord _word) {
+		return PolynomialWord{
+			rijndael_substitution_box[_word[0]],
+			rijndael_substitution_box[_word[1]],
+			rijndael_substitution_box[_word[2]],
+			rijndael_substitution_box[_word[3]]
+		};
+	}
 
+	PolynomialWord rotateWord(PolynomialWord _word) {
+		return PolynomialWord{
+			_word[1],
+			_word[2],
+			_word[3],
+			_word[0],
+		};
+	}
+
+	template<uint32_t expanded_key_size, uint8_t key_size>
+	std::array<uint8_t, expanded_key_size> keyExpansion(std::array<uint8_t, key_size>* _key) {
+		std::array<uint8_t, expanded_key_size> expanded_key;
+
+		std::memcpy(expanded_key.data(), _key->data(), key_size);
+
+		PolynomialWord round_constant = { 0x01, 0x00, 0x00, 0x00 };
+		for (uint64_t i = key_size; i < expanded_key_size; i += 4) {
+			PolynomialWord temp;
+
+			std::memcpy(temp.data(), expanded_key.data() + i, 4);
+			if constexpr (key_size == 32) {
+				if (i % (key_size) == 4) {
+					temp = substituteWord(temp);
+				}
+			} else {
+				if (i % (key_size / 4) == 0) {
+					temp = gfAddition(substituteWord(rotateWord(temp)), round_constant);
+				}
+			}
+
+			expanded_key[i + 0] = gfAddition(temp[0], expanded_key[i - (key_size / 4)]);
+			expanded_key[i + 1] = gfAddition(temp[1], expanded_key[i - (key_size / 4)]);
+			expanded_key[i + 2] = gfAddition(temp[2], expanded_key[i - (key_size / 4)]);
+			expanded_key[i + 3] = gfAddition(temp[3], expanded_key[i - (key_size / 4)]);
+
+			round_constant = PolynomialWord{
+				gfMultiplication(round_constant[0], 0x02),
+				0x00,
+				0x00,
+				0x00
+			};
+		}
+
+		return std::move(expanded_key);
 	}
 
 	template<uint8_t block_size, uint8_t key_size>
@@ -193,11 +243,20 @@ namespace aes {
 	) {
 		constexpr uint8_t rounds = getRoundCount(block_size, key_size);
 
-		addRoundKey(_block, _block);
-		for (uint8_t i = 0; i < (rounds - 1); i++) {
-			round(_block, _key);
+		std::array<uint8_t, block_size> round_key;
+		std::array<uint8_t, block_size * (rounds + 1)> expanded_key = keyExpansion<block_size * (rounds + 1)>(_key);
+
+		std::memcpy(round_key.data(), expanded_key.data(), block_size);
+		addRoundKey(_block, &round_key);
+
+		for (uint64_t i = 0; i < (rounds - 1); i++) {
+			std::memcpy(round_key.data(), expanded_key.data() + (i * block_size), block_size);
+			round(_block, &round_key);
 		}
-		round(_block, _key, true);
+
+		std::memcpy(round_key.data(), expanded_key.data() + (rounds * block_size), block_size);
+		round(_block, &round_key, true);
+
 		return BlockType{};
 	}
 
