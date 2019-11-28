@@ -1,5 +1,8 @@
 ﻿#include "aes_lib.hpp"
 
+#include <sstream>
+#include <iomanip>
+
 namespace aes {
 	std::array<uint8_t, 0x100> rijndael_substitution_box = {
 		0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
@@ -123,7 +126,7 @@ namespace aes {
 
 	template<uint8_t block_size>
 	void byteSubstitution(std::array<uint8_t, block_size>* _block) {
-		for (uint8_t i = 0; i < 128; i++) {
+		for (uint8_t i = 0; i < block_size; i++) {
 			(*_block)[i] = rijndael_substitution_box[(*_block)[i]];
 		}
 	}
@@ -173,12 +176,12 @@ namespace aes {
 		}
 	}
 
-	template<uint8_t block_size, uint8_t key_size>
-	void round(std::array<uint8_t, block_size>* _block, std::array<uint8_t, key_size>* _key, bool final_round = false) {
+	template<uint8_t block_size>
+	void round(std::array<uint8_t, block_size>* _block, std::array<uint8_t, block_size>* _key, bool final_round = false) {
 		byteSubstitution(_block);
 		shiftRows(_block);
 		if (!final_round) mixColumns(_block);
-		addRoundKey(_block, _block);
+		addRoundKey(_block, _key);
 	}
 
 	PolynomialWord substituteWord(PolynomialWord _word) {
@@ -236,8 +239,15 @@ namespace aes {
 		return std::move(expanded_key);
 	}
 
+	template<uint8_t key_size>
+	std::array<uint8_t, key_size> prepareKey(std::istream& _key) {
+		std::array<uint8_t, key_size> key;
+		_key.read(reinterpret_cast<char*>(key.data()), key_size);
+		return key;
+	}
+
 	template<uint8_t block_size, uint8_t key_size>
-	inline std::array<uint8_t, block_size> _encrypt(
+	inline void _encryptBlock(
 		std::array<uint8_t, block_size>* _block,
 		std::array<uint8_t, key_size>* _key
 	) {
@@ -249,46 +259,106 @@ namespace aes {
 		std::memcpy(round_key.data(), expanded_key.data(), block_size);
 		addRoundKey(_block, &round_key);
 
-		for (uint64_t i = 0; i < (rounds - 1); i++) {
+		for (uint64_t i = 1; i < (rounds - 1); i++) {
 			std::memcpy(round_key.data(), expanded_key.data() + (i * block_size), block_size);
 			round(_block, &round_key);
 		}
 
 		std::memcpy(round_key.data(), expanded_key.data() + (rounds * block_size), block_size);
 		round(_block, &round_key, true);
-
-		return BlockType{};
 	}
 
-	BlockType encrypt(BlockType* _block, Key128Type* _key) {
-		return _encrypt(_block, _key);
+	template<uint8_t key_size>
+	void _encrypt(std::istream& _input_data, std::ostream& _output_cypher, std::istream& _key) {
+		std::array<uint8_t, key_size> key = prepareKey<key_size>(_key);
+
+		do {
+			BlockType data;
+			size_t read = _input_data.readsome(reinterpret_cast<char*>(data.data()), 16);
+			if (read != 16) {
+				if (_input_data.eof()) {
+					for (uint8_t i = static_cast<uint8_t>(read); i < 16; i++) {
+						data[i] = 0;
+					}
+				} else std::runtime_error("Internal error: didn't read enough caracters. (0x01)");
+			}
+			_encryptBlock(&data, &key);
+			_output_cypher.write(reinterpret_cast<char*>(data.data()), 16);
+		} while (!_input_data.eof());
 	}
 
-	BlockType encrypt(BlockType* _block, Key192Type* _key) {
-		return _encrypt(_block, _key);
-	}
+	void encrypt(std::istream& _input_data, std::ostream& _output_cypher, std::istream& _key) {
+		std::streampos key_size;
+		_key.seekg(0, std::ios::end);
+		key_size = _key.tellg();
+		_key.seekg(0, std::ios::beg);
 
-	BlockType encrypt(BlockType* _block, Key256Type* _key) {
-		return _encrypt(_block, _key);
+		if (key_size == 16) _encrypt<16>(_input_data, _output_cypher, _key);
+		else if (key_size == 24) _encrypt<24>(_input_data, _output_cypher, _key);
+		else if (key_size == 32) _encrypt<32>(_input_data, _output_cypher, _key);
+		else throw std::runtime_error("Key must have 128, 192, or 256 bits.");
 	}
 
 	template<uint8_t block_size, uint8_t key_size>
-	inline std::array<uint8_t, block_size> _decrypt(
+	inline void _decryptBlock(
 		std::array<uint8_t, block_size>* _block,
 		std::array<uint8_t, key_size>* _key
 	) {
-		return BlockType{};
+
 	}
 
-	BlockType decrypt(BlockType* _block, Key128Type* _key) {
-		return _decrypt(_block, _key);
+	template<uint8_t key_size>
+	void _decrypt(std::istream& _input_cypher, std::ostream& _output_data, std::istream& _key) {
+		std::array<uint8_t, key_size> key = prepareKey<key_size>(_key);
+
+		do {
+			BlockType cypher;
+			size_t read = _input_cypher.readsome(reinterpret_cast<char*>(cypher.data()), 16);
+			if (read != 16) std::runtime_error("Internal error: didn't read enough caracters. (0x02)");
+			_decryptBlock(&cypher, &key);
+			uint8_t writing = 16;
+			if (_input_cypher.eof()) {
+				for (uint8_t i = 15; i > 0; i--) {
+					if (cypher[i] == 0 && cypher[i - 1] != 0) writing--;
+				}
+			}
+			_output_data.write(reinterpret_cast<char*>(cypher.data()), writing);
+		} while (!_input_cypher.eof());
 	}
 
-	BlockType decrypt(BlockType* _block, Key192Type* _key) {
-		return _decrypt(_block, _key);
+	void decrypt(std::istream& _input_cypher, std::ostream& _output_data, std::istream& _key) {
+		std::streampos key_size;
+		_key.seekg(0, std::ios::end);
+		key_size = _key.tellg();
+		_key.seekg(0, std::ios::beg);
+
+		if (key_size == 16) _decrypt<16>(_input_cypher, _output_data, _key);
+		else if (key_size == 24) _decrypt<24>(_input_cypher, _output_data, _key);
+		else if (key_size == 32) _decrypt<32>(_input_cypher, _output_data, _key);
+		else throw std::runtime_error("Key must have 128, 192, or 256 bits.");
 	}
 
-	BlockType decrypt(BlockType* _block, Key256Type* _key) {
-		return _decrypt(_block, _key);
+	std::string fromHexStringToBits(std::string _input) {
+		std::stringstream input_ss(std::ios::in | std::ios::out | std::ios::binary), output_ss(std::ios::in | std::ios::out | std::ios::binary);
+		input_ss << _input;
+		char hex[2];
+		while (!input_ss.read(hex, 2).eof()) {
+			size_t l;
+			char c = static_cast<char>(std::stoi(hex, &l, 16));
+			if (l != 2) throw std::runtime_error("Converter encountered a invalid hex value.");
+			else output_ss << static_cast<char>(std::stoi(hex, nullptr, 16));
+		}
+		return output_ss.str();
+	}
+
+	std::string fromBitsToHexString(std::string _input) {
+		std::stringstream input_ss(std::ios::in | std::ios::out | std::ios::binary), output_ss(std::ios::in | std::ios::out | std::ios::binary);
+		input_ss << _input;
+		char hex[2];
+		hex[1] = '\x0';
+		while (!input_ss.read(hex, 1).eof()) {
+			output_ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<uint64_t>(hex[0]);
+		}
+		return output_ss.str();
 	}
 }

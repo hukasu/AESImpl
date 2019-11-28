@@ -13,13 +13,16 @@ namespace aes {
 	typedef std::array<uint8_t, 24> Key192Type;
 	typedef std::array<uint8_t, 32> Key256Type;
 
-	BlockType encrypt(BlockType* _block, Key128Type* _key);
-	BlockType encrypt(BlockType* _block, Key192Type* _key);
-	BlockType encrypt(BlockType* _block, Key256Type* _key);
+	void encrypt(std::istream& _input_data, std::ostream& _output_cypher, std::istream& _key);
+	void decrypt(std::istream& _input_cypher, std::ostream& _output_data, std::istream& _key);
 
-	BlockType decrypt(BlockType* _block, Key128Type* _key);
-	BlockType decrypt(BlockType* _block, Key192Type* _key);
-	BlockType decrypt(BlockType* _block, Key256Type* _key);
+	// Translates a string of hex values into a string of bits
+	// i.e. "0001" into "\\x0\\x1"
+	std::string fromHexStringToBits(std::string _str);
+
+	// Translates a string into a string  of hex values
+	// i.e. "\\x0\\x1" into "0001"
+	std::string fromBitsToHexString(std::string _str);
 }
 
 #endif // __AES__LIB__HPP__
