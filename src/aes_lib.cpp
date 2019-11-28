@@ -39,6 +39,7 @@ namespace aes {
 	constexpr inline uint8_t gfAddition(uint8_t _lhs, uint8_t _rhs) {
 		return _lhs ^ _rhs;
 	}
+	static_assert(gfAddition(0x57, 0x00) == 0x57);
 	static_assert(gfAddition(0x57, 0x83) == 0xd4);
 
 	constexpr inline uint8_t gfMultiplication(uint8_t _lhs, uint8_t _rhs) {
@@ -61,6 +62,7 @@ namespace aes {
 	}
 	static_assert(gfMultiplication(0x57, 0x83) == 0xc1);
 	static_assert(gfMultiplication(0x57, 0x13) == 0xfe);
+	static_assert(gfMultiplication(0x57, 0x01) == 0x57);
 	static_assert(gfMultiplication(0x57, 0x02) == 0xae);
 	static_assert(gfMultiplication(0x57, 0x04) == 0x47);
 	static_assert(gfMultiplication(0xae, 0x02) == 0x47);
@@ -69,6 +71,8 @@ namespace aes {
 	static_assert(gfMultiplication(0x57, 0x10) == 0x07);
 	static_assert(gfMultiplication(0x8e, 0x02) == 0x07);
 	static_assert(gfMultiplication(0x57, gfAddition(gfAddition(0x01, 0x02), 0x10)) == gfMultiplication(0x57, 0x13));
+	static_assert(gfMultiplication(0x57, gfAddition(0x01, gfAddition(0x02, 0x10))) == gfMultiplication(0x57, 0x13));
+	static_assert(gfMultiplication(gfMultiplication(0x8e, 0x02), 0x07) == gfMultiplication(0x8e, gfMultiplication(0x02, 0x07)));
 
 	inline PolynomialWord gfAddition(PolynomialWord _lhs, PolynomialWord _rhs) {
 		return PolynomialWord{
@@ -150,22 +154,22 @@ namespace aes {
 	template<uint8_t block_size>
 	void mixColumns(std::array<uint8_t, block_size>* _block) {
 		PolynomialWord cx = {
-			0x03, 0x01, 0x01, 0x02
-		};
+			0x02, 0x01, 0x01, 0x03
+			};
 		for (uint64_t i = 0; i < (block_size / 4); i++) {
 			PolynomialWord temp = gfMultiplication(
 				cx,
 				PolynomialWord{
-					(*_block)[i + 0],
-					(*_block)[i + 1],
-					(*_block)[i + 2],
-					(*_block)[i + 3]
+					(*_block)[(i * 4) + 0],
+					(*_block)[(i * 4) + 1],
+					(*_block)[(i * 4) + 2],
+					(*_block)[(i * 4) + 3]
 				}
 			);
-			(*_block)[i + 0] = temp[0];
-			(*_block)[i + 1] = temp[1];
-			(*_block)[i + 2] = temp[2];
-			(*_block)[i + 3] = temp[3];
+			(*_block)[(i * 4) + 0] = temp[0];
+			(*_block)[(i * 4) + 1] = temp[1];
+			(*_block)[(i * 4) + 2] = temp[2];
+			(*_block)[(i * 4) + 3] = temp[3];
 		}
 	}
 
@@ -254,7 +258,7 @@ namespace aes {
 		constexpr uint8_t rounds = getRoundCount(block_size, key_size);
 
 		std::array<uint8_t, block_size> round_key;
-		std::array<uint8_t, block_size * (rounds + 1)> expanded_key = keyExpansion<block_size * (rounds + 1)>(_key);
+		std::array<uint8_t, (block_size / 4) * (rounds + 1)> expanded_key = keyExpansion<(block_size / 4) * (rounds + 1)>(_key);
 
 		std::memcpy(round_key.data(), expanded_key.data(), block_size);
 		addRoundKey(_block, &round_key);
