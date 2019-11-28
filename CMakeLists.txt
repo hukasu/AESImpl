@@ -12,6 +12,10 @@ target_compile_features(
 	aes_lib
 	PUBLIC cxx_std_17
 )
+target_include_directories(
+	aes_lib
+	INTERFACE src
+)
 
 if (BUILD_COMMAND_LINE_TOOL)
 	add_executable(
