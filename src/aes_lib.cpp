@@ -216,28 +216,28 @@ namespace aes {
 		for (uint64_t i = key_size; i < expanded_key_size; i += 4) {
 			PolynomialWord temp;
 
-			std::memcpy(temp.data(), expanded_key.data() + i, 4);
+			std::memcpy(temp.data(), expanded_key.data() + (i - 4), 4);
 			if constexpr (key_size == 32) {
-				if (i % (key_size) == 4) {
+				if (i % key_size == 4) {
 					temp = substituteWord(temp);
 				}
 			} else {
-				if (i % (key_size / 4) == 0) {
+				if (i % key_size == 0) {
 					temp = gfAddition(substituteWord(rotateWord(temp)), round_constant);
+
+					round_constant = PolynomialWord{
+						gfMultiplication(round_constant[0], 0x02),
+						0x00,
+						0x00,
+						0x00
+					};
 				}
 			}
 
-			expanded_key[i + 0] = gfAddition(temp[0], expanded_key[i - (key_size / 4)]);
-			expanded_key[i + 1] = gfAddition(temp[1], expanded_key[i - (key_size / 4)]);
-			expanded_key[i + 2] = gfAddition(temp[2], expanded_key[i - (key_size / 4)]);
-			expanded_key[i + 3] = gfAddition(temp[3], expanded_key[i - (key_size / 4)]);
-
-			round_constant = PolynomialWord{
-				gfMultiplication(round_constant[0], 0x02),
-				0x00,
-				0x00,
-				0x00
-			};
+			expanded_key[i + 0] = gfAddition(temp[0], expanded_key[i + 0 - key_size]);
+			expanded_key[i + 1] = gfAddition(temp[1], expanded_key[i + 1 - key_size]);
+			expanded_key[i + 2] = gfAddition(temp[2], expanded_key[i + 2 - key_size]);
+			expanded_key[i + 3] = gfAddition(temp[3], expanded_key[i + 3 - key_size]);
 		}
 
 		return std::move(expanded_key);
@@ -258,7 +258,7 @@ namespace aes {
 		constexpr uint8_t rounds = getRoundCount(block_size, key_size);
 
 		std::array<uint8_t, block_size> round_key;
-		std::array<uint8_t, (block_size / 4) * (rounds + 1)> expanded_key = keyExpansion<(block_size / 4) * (rounds + 1)>(_key);
+		std::array<uint8_t, block_size * (rounds + 1)> expanded_key = keyExpansion<block_size * (rounds + 1)>(_key);
 
 		std::memcpy(round_key.data(), expanded_key.data(), block_size);
 		addRoundKey(_block, &round_key);
@@ -276,7 +276,12 @@ namespace aes {
 	void _encrypt(std::istream& _input_data, std::ostream& _output_cypher, std::istream& _key) {
 		std::array<uint8_t, key_size> key = prepareKey<key_size>(_key);
 
-		do {
+		std::streampos data_length;
+		_input_data.seekg(0, std::ios::end);
+		data_length = _input_data.tellg();
+		_input_data.seekg(0, std::ios::beg);
+
+		while (_input_data.good()) {
 			BlockType data;
 			size_t read = _input_data.readsome(reinterpret_cast<char*>(data.data()), 16);
 			if (read != 16) {
@@ -284,11 +289,11 @@ namespace aes {
 					for (uint8_t i = static_cast<uint8_t>(read); i < 16; i++) {
 						data[i] = 0;
 					}
-				} else std::runtime_error("Internal error: didn't read enough caracters. (0x01)");
+				} else throw std::runtime_error("Internal error: didn't read enough caracters. (0x01)");
 			}
 			_encryptBlock(&data, &key);
 			_output_cypher.write(reinterpret_cast<char*>(data.data()), 16);
-		} while (!_input_data.eof());
+		}
 	}
 
 	void encrypt(std::istream& _input_data, std::ostream& _output_cypher, std::istream& _key) {
@@ -318,7 +323,7 @@ namespace aes {
 		do {
 			BlockType cypher;
 			size_t read = _input_cypher.readsome(reinterpret_cast<char*>(cypher.data()), 16);
-			if (read != 16) std::runtime_error("Internal error: didn't read enough caracters. (0x02)");
+			if (read != 16) throw std::runtime_error("Internal error: didn't read enough caracters. (0x02)");
 			_decryptBlock(&cypher, &key);
 			uint8_t writing = 16;
 			if (_input_cypher.eof()) {
@@ -327,7 +332,7 @@ namespace aes {
 				}
 			}
 			_output_data.write(reinterpret_cast<char*>(cypher.data()), writing);
-		} while (!_input_cypher.eof());
+		} while (_input_cypher.good());
 	}
 
 	void decrypt(std::istream& _input_cypher, std::ostream& _output_data, std::istream& _key) {
