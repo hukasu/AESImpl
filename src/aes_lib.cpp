@@ -326,7 +326,7 @@ namespace aes {
 		std::memcpy(round_key.data(), _exp_key->data(), 4 * block_size);
 		addRoundKey<block_size>(_block, &round_key);
 
-		for (uint64_t i = 1; i < (round_count - 1); i++) {
+		for (uint64_t i = 1; i < round_count; i++) {
 			std::memcpy(round_key.data(), _exp_key->data() + (i * 4 * block_size), 4 * block_size);
 			round<block_size>(_block, &round_key);
 		}
@@ -357,6 +357,8 @@ namespace aes {
 			
 			_encryptBlock<block_size, round_count>(&data, &expanded_key);
 			_output_cypher.write(reinterpret_cast<char*>(data.data()), 4 * block_size);
+
+			data_length -= read_count;
 		}
 	}
 
