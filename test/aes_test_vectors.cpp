@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include <sstream>
-#include <iomanip>
 
 int main(int argc, char** argv) {
 	std::string 

@@ -23,18 +23,34 @@ namespace aes {
 		0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16
 	};
 
-	constexpr uint8_t getRoundCount(uint8_t block_size, uint8_t key_size) {
-		return block_size == 16 ? (key_size == 16 ? 10 : (key_size == 24 ? 12 : 14)) : (block_size == 24 ? (key_size == 32 ? 14 : 12) : 14);
+	template<uint8_t block_size, uint8_t key_size>
+	constexpr uint8_t getRoundCount() {
+		static_assert(block_size == 4 || block_size == 6 || block_size == 8, "Block size must be 128, 192, or 256 bits.");
+		static_assert(key_size == 4 || key_size == 6 || key_size == 8, "Key size must be 128, 192, or 256 bits.");
+
+		if constexpr (block_size == 4) {
+			if constexpr (key_size == 4) return 10;
+			else if (key_size == 6) return 12;
+			else if (key_size == 8) return 14;
+		} else if (block_size == 6) {
+			if constexpr (key_size == 4) return 12;
+			else if (key_size == 6) return 12;
+			else if (key_size == 8) return 14;
+		} else if (block_size == 8) {
+			if constexpr (key_size == 4) return 14;
+			else if (key_size == 6) return 14;
+			else if (key_size == 8) return 14;
+		}
 	}
-	static_assert(getRoundCount(16, 16) == 10);
-	static_assert(getRoundCount(16, 24) == 12);
-	static_assert(getRoundCount(16, 32) == 14);
-	static_assert(getRoundCount(24, 16) == 12);
-	static_assert(getRoundCount(24, 24) == 12);
-	static_assert(getRoundCount(24, 32) == 14);
-	static_assert(getRoundCount(32, 16) == 14);
-	static_assert(getRoundCount(32, 24) == 14);
-	static_assert(getRoundCount(32, 32) == 14);
+	static_assert(getRoundCount<4, 4>() == 10);
+	static_assert(getRoundCount<4, 6>() == 12);
+	static_assert(getRoundCount<4, 8>() == 14);
+	static_assert(getRoundCount<6, 4>() == 12);
+	static_assert(getRoundCount<6, 6>() == 12);
+	static_assert(getRoundCount<6, 8>() == 14);
+	static_assert(getRoundCount<8, 4>() == 14);
+	static_assert(getRoundCount<8, 6>() == 14);
+	static_assert(getRoundCount<8, 8>() == 14);
 
 	constexpr inline uint8_t gfAddition(uint8_t _lhs, uint8_t _rhs) {
 		return _lhs ^ _rhs;
@@ -74,8 +90,8 @@ namespace aes {
 	static_assert(gfMultiplication(0x57, gfAddition(0x01, gfAddition(0x02, 0x10))) == gfMultiplication(0x57, 0x13));
 	static_assert(gfMultiplication(gfMultiplication(0x8e, 0x02), 0x07) == gfMultiplication(0x8e, gfMultiplication(0x02, 0x07)));
 
-	inline PolynomialWord gfAddition(PolynomialWord _lhs, PolynomialWord _rhs) {
-		return PolynomialWord{
+	inline std::array<uint8_t, 4> gfAddition(std::array<uint8_t, 4> _lhs, std::array<uint8_t, 4> _rhs) {
+		return std::array<uint8_t, 4>{
 			gfAddition(_lhs[0], _rhs[0]),
 			gfAddition(_lhs[1], _rhs[1]),
 			gfAddition(_lhs[2], _rhs[2]),
@@ -83,8 +99,8 @@ namespace aes {
 		};
 	}
 
-	inline PolynomialWord gfMultiplication(PolynomialWord _lhs, PolynomialWord _rhs) {
-		return PolynomialWord{
+	inline std::array<uint8_t, 4> gfMultiplication(std::array<uint8_t, 4> _lhs, std::array<uint8_t, 4> _rhs) {
+		return std::array<uint8_t, 4>{
 			gfAddition(
 				gfAddition(
 					gfMultiplication(_lhs[0], _rhs[0]),
@@ -129,37 +145,91 @@ namespace aes {
 	}
 
 	template<uint8_t block_size>
-	void byteSubstitution(std::array<uint8_t, block_size>* _block) {
-		for (uint8_t i = 0; i < block_size; i++) {
+	void byteSubstitution(std::array<uint8_t, 4 * block_size>* _block) {
+		for (uint8_t i = 0; i < 4 * block_size; i++) {
 			(*_block)[i] = rijndael_substitution_box[(*_block)[i]];
 		}
 	}
 
 	template<uint8_t block_size>
-	void shiftRows(std::array<uint8_t, block_size>* _block) {
-		// Row 0 does nothing
-		// Row 1 shift by 1
-		std::swap((*_block)[1], (*_block)[5]);
-		std::swap((*_block)[5], (*_block)[9]);
-		std::swap((*_block)[9], (*_block)[13]);
-		// Row 2 shift by 2
-		std::swap((*_block)[2], (*_block)[10]);
-		std::swap((*_block)[6], (*_block)[14]);
-		// Row 3 shift by 3
-		std::swap((*_block)[15], (*_block)[11]);
-		std::swap((*_block)[11], (*_block)[7]);
-		std::swap((*_block)[7], (*_block)[3]);
+	void shiftRows(std::array<uint8_t, 4 * block_size>* _block) {
+		if constexpr (block_size == 4) {
+			// 00, 04, 08, 12		00, 04, 08, 12
+			// 01, 05, 09, 13	=>	05, 09, 13, 01
+			// 02, 06, 10, 14		10, 14, 02, 06
+			// 03, 07, 11, 15		15, 03, 07, 11
+			// Row 0 does nothing
+			// Row 1 shift by 1
+			std::swap((*_block)[ 1], (*_block)[13]);
+			std::swap((*_block)[ 1], (*_block)[ 9]);
+			std::swap((*_block)[ 1], (*_block)[ 5]);
+			// Row 2 shift by 2
+			std::swap((*_block)[ 2], (*_block)[10]);
+			std::swap((*_block)[ 6], (*_block)[14]);
+			// Row 3 shift by 3
+			std::swap((*_block)[15], (*_block)[11]);
+			std::swap((*_block)[11], (*_block)[ 7]);
+			std::swap((*_block)[ 7], (*_block)[ 3]);
+		} else if (block_size == 6) {
+			// 00, 04, 08, 12, 16, 20		00, 04, 08, 12, 16, 20
+			// 01, 05, 09, 13, 17, 21	=>	05, 09, 13, 17, 21, 01
+			// 02, 06, 10, 14, 18, 22		10, 14, 18, 22, 02, 06
+			// 03, 07, 11, 15, 19, 23		15, 19, 23, 03, 07, 11
+			// Row 0 does nothing
+			// Row 1 shift by 1
+			std::swap((*_block)[ 1], (*_block)[21]);
+			std::swap((*_block)[ 1], (*_block)[17]);
+			std::swap((*_block)[ 1], (*_block)[13]);
+			std::swap((*_block)[ 1], (*_block)[ 9]);
+			std::swap((*_block)[ 1], (*_block)[ 5]);
+			// Row 2 shift by 2
+			std::swap((*_block)[ 2], (*_block)[18]);
+			std::swap((*_block)[ 2], (*_block)[10]);
+			std::swap((*_block)[ 6], (*_block)[22]);
+			std::swap((*_block)[ 6], (*_block)[14]);
+			// Row 3 shift by 3
+			std::swap((*_block)[ 3], (*_block)[15]);
+			std::swap((*_block)[ 7], (*_block)[19]);
+			std::swap((*_block)[11], (*_block)[23]);
+		} else if (block_size == 8) {
+			// 00, 04, 08, 12, 16, 20, 24, 28		00, 04, 08, 12, 16, 20, 24, 28
+			// 01, 05, 09, 13, 17, 21, 25, 29	=>	05, 09, 13, 17, 21, 25, 29, 01
+			// 02, 06, 10, 14, 18, 22, 26, 30		14, 18, 22, 26, 30, 02, 06, 10
+			// 03, 07, 11, 15, 19, 23, 27, 31		19, 23, 27, 31, 03, 07, 11, 15
+			// Row 0 does nothing
+			// Row 1 shift by 1
+			std::swap((*_block)[ 1], (*_block)[29]);
+			std::swap((*_block)[ 1], (*_block)[25]);
+			std::swap((*_block)[ 1], (*_block)[21]);
+			std::swap((*_block)[ 1], (*_block)[17]);
+			std::swap((*_block)[ 1], (*_block)[13]);
+			std::swap((*_block)[ 1], (*_block)[ 9]);
+			std::swap((*_block)[ 1], (*_block)[ 5]);
+			// Row 2 shift by 3
+			std::swap((*_block)[2], (*_block)[22]);
+			std::swap((*_block)[2], (*_block)[10]);
+			std::swap((*_block)[2], (*_block)[30]);
+			std::swap((*_block)[2], (*_block)[18]);
+			std::swap((*_block)[2], (*_block)[ 6]);
+			std::swap((*_block)[2], (*_block)[26]);
+			std::swap((*_block)[2], (*_block)[14]);
+			// Row 3 shift by 4
+			std::swap((*_block)[ 3], (*_block)[19]);
+			std::swap((*_block)[ 7], (*_block)[23]);
+			std::swap((*_block)[11], (*_block)[27]);
+			std::swap((*_block)[15], (*_block)[31]);
+		}
 	}
 
 	template<uint8_t block_size>
-	void mixColumns(std::array<uint8_t, block_size>* _block) {
-		PolynomialWord cx = {
+	void mixColumns(std::array<uint8_t, 4 * block_size>* _block) {
+		std::array<uint8_t, 4> cx = {
 			0x02, 0x01, 0x01, 0x03
-			};
-		for (uint64_t i = 0; i < (block_size / 4); i++) {
-			PolynomialWord temp = gfMultiplication(
+		};
+		for (uint64_t i = 0; i < block_size; i++) {
+			std::array<uint8_t, 4> temp = gfMultiplication(
 				cx,
-				PolynomialWord{
+				std::array<uint8_t, 4>{
 					(*_block)[(i * 4) + 0],
 					(*_block)[(i * 4) + 1],
 					(*_block)[(i * 4) + 2],
@@ -174,22 +244,26 @@ namespace aes {
 	}
 
 	template<uint8_t block_size>
-	void addRoundKey(std::array<uint8_t, block_size>* _block, std::array<uint8_t, block_size>* _key) {
-		for (uint8_t i = 0; i < block_size; i++) {
+	void addRoundKey(std::array<uint8_t, 4 * block_size>* _block, std::array<uint8_t, 4 * block_size>* _key) {
+		for (uint8_t i = 0; i < 4 * block_size; i++) {
 			(*_block)[i] = gfAddition((*_block)[i], (*_key)[i]);
 		}
 	}
 
 	template<uint8_t block_size>
-	void round(std::array<uint8_t, block_size>* _block, std::array<uint8_t, block_size>* _key, bool final_round = false) {
-		byteSubstitution(_block);
-		shiftRows(_block);
-		if (!final_round) mixColumns(_block);
-		addRoundKey(_block, _key);
+	void round(
+		std::array<uint8_t, 4 * block_size>* _block,
+		std::array<uint8_t, 4 * block_size>* _key,
+		bool final_round = false
+	) {
+		byteSubstitution<block_size>(_block);
+		shiftRows<block_size>(_block);
+		if (!final_round) mixColumns<block_size>(_block);
+		addRoundKey<block_size>(_block, _key);
 	}
 
-	PolynomialWord substituteWord(PolynomialWord _word) {
-		return PolynomialWord{
+	std::array<uint8_t, 4> substituteWord(std::array<uint8_t, 4> _word) {
+		return std::array<uint8_t, 4>{
 			rijndael_substitution_box[_word[0]],
 			rijndael_substitution_box[_word[1]],
 			rijndael_substitution_box[_word[2]],
@@ -197,8 +271,8 @@ namespace aes {
 		};
 	}
 
-	PolynomialWord rotateWord(PolynomialWord _word) {
-		return PolynomialWord{
+	std::array<uint8_t, 4> rotateWord(std::array<uint8_t, 4> _word) {
+		return std::array<uint8_t, 4>{
 			_word[1],
 			_word[2],
 			_word[3],
@@ -207,92 +281,82 @@ namespace aes {
 	}
 
 	template<uint32_t expanded_key_size, uint8_t key_size>
-	std::array<uint8_t, expanded_key_size> keyExpansion(std::array<uint8_t, key_size>* _key) {
-		std::array<uint8_t, expanded_key_size> expanded_key;
+	std::array<uint8_t, 4 * expanded_key_size> keyExpansion(std::array<uint8_t, 4 * key_size>* _key) {
+		std::array<uint8_t, 4 * expanded_key_size> expanded_key;
 
-		std::memcpy(expanded_key.data(), _key->data(), key_size);
+		std::memcpy(expanded_key.data(), _key->data(), 4 * key_size);
 
-		PolynomialWord round_constant = { 0x01, 0x00, 0x00, 0x00 };
-		for (uint64_t i = key_size; i < expanded_key_size; i += 4) {
-			PolynomialWord temp;
+		std::array<uint8_t, 4> round_constant = { 0x01, 0x00, 0x00, 0x00 };
+		for (uint64_t i = key_size; i < expanded_key_size; i++) {
+			std::array<uint8_t, 4> temp;
+			std::memcpy(temp.data(), expanded_key.data() + ((i - 1) * 4), 4);
 
-			std::memcpy(temp.data(), expanded_key.data() + (i - 4), 4);
-			if constexpr (key_size == 32) {
+			if (i % key_size == 0) {
+				temp = gfAddition(substituteWord(rotateWord(temp)), round_constant);
+
+				round_constant[0] = gfMultiplication(round_constant[0], 0x02);
+			} else if constexpr (key_size == 8) {
 				if (i % key_size == 4) {
 					temp = substituteWord(temp);
 				}
-			} else {
-				if (i % key_size == 0) {
-					temp = gfAddition(substituteWord(rotateWord(temp)), round_constant);
-
-					round_constant = PolynomialWord{
-						gfMultiplication(round_constant[0], 0x02),
-						0x00,
-						0x00,
-						0x00
-					};
-				}
 			}
 
-			expanded_key[i + 0] = gfAddition(temp[0], expanded_key[i + 0 - key_size]);
-			expanded_key[i + 1] = gfAddition(temp[1], expanded_key[i + 1 - key_size]);
-			expanded_key[i + 2] = gfAddition(temp[2], expanded_key[i + 2 - key_size]);
-			expanded_key[i + 3] = gfAddition(temp[3], expanded_key[i + 3 - key_size]);
+			expanded_key[(i * 4) + 0] = gfAddition(temp[0], expanded_key[((i - key_size) * 4) + 0 ]);
+			expanded_key[(i * 4) + 1] = gfAddition(temp[1], expanded_key[((i - key_size) * 4) + 1 ]);
+			expanded_key[(i * 4) + 2] = gfAddition(temp[2], expanded_key[((i - key_size) * 4) + 2 ]);
+			expanded_key[(i * 4) + 3] = gfAddition(temp[3], expanded_key[((i - key_size) * 4) + 3 ]);
 		}
 
 		return std::move(expanded_key);
 	}
 
 	template<uint8_t key_size>
-	std::array<uint8_t, key_size> prepareKey(std::istream& _key) {
-		std::array<uint8_t, key_size> key;
-		_key.read(reinterpret_cast<char*>(key.data()), key_size);
+	std::array<uint8_t, 4 * key_size> prepareKey(std::istream& _key) {
+		std::array<uint8_t, 4 * key_size> key;
+		_key.read(reinterpret_cast<char*>(key.data()), 4 * key_size);
 		return key;
 	}
 
-	template<uint8_t block_size, uint8_t key_size>
+	template<uint8_t block_size, uint8_t round_count>
 	inline void _encryptBlock(
-		std::array<uint8_t, block_size>* _block,
-		std::array<uint8_t, key_size>* _key
+		std::array<uint8_t, 4 * block_size>* _block,
+		std::array<uint8_t, 4 * block_size * (round_count + 1)>* _exp_key
 	) {
-		constexpr uint8_t rounds = getRoundCount(block_size, key_size);
+		std::array<uint8_t, 4 * block_size> round_key;
+		std::memcpy(round_key.data(), _exp_key->data(), 4 * block_size);
+		addRoundKey<block_size>(_block, &round_key);
 
-		std::array<uint8_t, block_size> round_key;
-		std::array<uint8_t, block_size * (rounds + 1)> expanded_key = keyExpansion<block_size * (rounds + 1)>(_key);
-
-		std::memcpy(round_key.data(), expanded_key.data(), block_size);
-		addRoundKey(_block, &round_key);
-
-		for (uint64_t i = 1; i < (rounds - 1); i++) {
-			std::memcpy(round_key.data(), expanded_key.data() + (i * block_size), block_size);
-			round(_block, &round_key);
+		for (uint64_t i = 1; i < (round_count - 1); i++) {
+			std::memcpy(round_key.data(), _exp_key->data() + (i * 4 * block_size), 4 * block_size);
+			round<block_size>(_block, &round_key);
 		}
 
-		std::memcpy(round_key.data(), expanded_key.data() + (rounds * block_size), block_size);
-		round(_block, &round_key, true);
+		std::memcpy(round_key.data(), _exp_key->data() + (round_count * 4 * block_size), 4 * block_size);
+		round<block_size>(_block, &round_key, true);
 	}
 
-	template<uint8_t key_size>
+	template<uint8_t block_size, uint8_t key_size>
 	void _encrypt(std::istream& _input_data, std::ostream& _output_cypher, std::istream& _key) {
-		std::array<uint8_t, key_size> key = prepareKey<key_size>(_key);
+		constexpr uint8_t round_count = getRoundCount<block_size, key_size>();
+
+		std::array<uint8_t, 4 * key_size> key = prepareKey<key_size>(_key);
+		std::array<uint8_t, 4 * block_size * (round_count + 1)> expanded_key = keyExpansion<block_size * (round_count + 1), key_size>(&key);
 
 		std::streampos data_length;
 		_input_data.seekg(0, std::ios::end);
 		data_length = _input_data.tellg();
 		_input_data.seekg(0, std::ios::beg);
 
-		while (_input_data.good()) {
-			BlockType data;
-			size_t read = _input_data.readsome(reinterpret_cast<char*>(data.data()), 16);
-			if (read != 16) {
-				if (_input_data.eof()) {
-					for (uint8_t i = static_cast<uint8_t>(read); i < 16; i++) {
-						data[i] = 0;
-					}
-				} else throw std::runtime_error("Internal error: didn't read enough caracters. (0x01)");
-			}
-			_encryptBlock(&data, &key);
-			_output_cypher.write(reinterpret_cast<char*>(data.data()), 16);
+		while (data_length > 0) {
+			size_t read_count = data_length > 4 * block_size ? 4 * block_size : data_length;
+			
+			std::array<uint8_t, 4 * block_size> data;
+			data.fill(0);
+			size_t read = _input_data.readsome(reinterpret_cast<char*>(data.data()), read_count);
+			if (read != read_count) throw std::runtime_error("Internal error: didn't read enough caracters. (0x01)");
+			
+			_encryptBlock<block_size, round_count>(&data, &expanded_key);
+			_output_cypher.write(reinterpret_cast<char*>(data.data()), 4 * block_size);
 		}
 	}
 
@@ -302,29 +366,29 @@ namespace aes {
 		key_size = _key.tellg();
 		_key.seekg(0, std::ios::beg);
 
-		if (key_size == 16) _encrypt<16>(_input_data, _output_cypher, _key);
-		else if (key_size == 24) _encrypt<24>(_input_data, _output_cypher, _key);
-		else if (key_size == 32) _encrypt<32>(_input_data, _output_cypher, _key);
+		if (key_size == 16) _encrypt<4, 4>(_input_data, _output_cypher, _key);
+		else if (key_size == 24) _encrypt<4, 6>(_input_data, _output_cypher, _key);
+		else if (key_size == 32) _encrypt<4, 8>(_input_data, _output_cypher, _key);
 		else throw std::runtime_error("Key must have 128, 192, or 256 bits.");
 	}
 
 	template<uint8_t block_size, uint8_t key_size>
 	inline void _decryptBlock(
-		std::array<uint8_t, block_size>* _block,
-		std::array<uint8_t, key_size>* _key
+		std::array<uint8_t, 4 * block_size>* _block,
+		std::array<uint8_t, 4 * key_size>* _key
 	) {
 
 	}
 
 	template<uint8_t key_size>
 	void _decrypt(std::istream& _input_cypher, std::ostream& _output_data, std::istream& _key) {
-		std::array<uint8_t, key_size> key = prepareKey<key_size>(_key);
+		std::array<uint8_t, 4 * key_size> key = prepareKey<key_size>(_key);
 
 		do {
-			BlockType cypher;
+			std::array<uint8_t, 16> cypher;
 			size_t read = _input_cypher.readsome(reinterpret_cast<char*>(cypher.data()), 16);
 			if (read != 16) throw std::runtime_error("Internal error: didn't read enough caracters. (0x02)");
-			_decryptBlock(&cypher, &key);
+			_decryptBlock<4, key_size>(&cypher, &key);
 			uint8_t writing = 16;
 			if (_input_cypher.eof()) {
 				for (uint8_t i = 15; i > 0; i--) {
@@ -341,9 +405,9 @@ namespace aes {
 		key_size = _key.tellg();
 		_key.seekg(0, std::ios::beg);
 
-		if (key_size == 16) _decrypt<16>(_input_cypher, _output_data, _key);
-		else if (key_size == 24) _decrypt<24>(_input_cypher, _output_data, _key);
-		else if (key_size == 32) _decrypt<32>(_input_cypher, _output_data, _key);
+		if (key_size == 16) _decrypt<4>(_input_cypher, _output_data, _key);
+		else if (key_size == 24) _decrypt<6>(_input_cypher, _output_data, _key);
+		else if (key_size == 32) _decrypt<8>(_input_cypher, _output_data, _key);
 		else throw std::runtime_error("Key must have 128, 192, or 256 bits.");
 	}
 
