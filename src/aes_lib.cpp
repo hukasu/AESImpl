@@ -22,6 +22,25 @@ namespace aes {
 		0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf,
 		0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16
 	};
+	
+	std::array<uint8_t, 0x100> rijndael_inverse_substitution_box = {
+		0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0xbf, 0x40, 0xa3, 0x9e, 0x81, 0xf3, 0xd7, 0xfb,
+		0x7c, 0xe3, 0x39, 0x82, 0x9b, 0x2f, 0xff, 0x87, 0x34, 0x8e, 0x43, 0x44, 0xc4, 0xde, 0xe9, 0xcb,
+		0x54, 0x7b, 0x94, 0x32, 0xa6, 0xc2, 0x23, 0x3d, 0xee, 0x4c, 0x95, 0x0b, 0x42, 0xfa, 0xc3, 0x4e,
+		0x08, 0x2e, 0xa1, 0x66, 0x28, 0xd9, 0x24, 0xb2, 0x76, 0x5b, 0xa2, 0x49, 0x6d, 0x8b, 0xd1, 0x25,
+		0x72, 0xf8, 0xf6, 0x64, 0x86, 0x68, 0x98, 0x16, 0xd4, 0xa4, 0x5c, 0xcc, 0x5d, 0x65, 0xb6, 0x92,
+		0x6c, 0x70, 0x48, 0x50, 0xfd, 0xed, 0xb9, 0xda, 0x5e, 0x15, 0x46, 0x57, 0xa7, 0x8d, 0x9d, 0x84,
+		0x90, 0xd8, 0xab, 0x00, 0x8c, 0xbc, 0xd3, 0x0a, 0xf7, 0xe4, 0x58, 0x05, 0xb8, 0xb3, 0x45, 0x06,
+		0xd0, 0x2c, 0x1e, 0x8f, 0xca, 0x3f, 0x0f, 0x02, 0xc1, 0xaf, 0xbd, 0x03, 0x01, 0x13, 0x8a, 0x6b,
+		0x3a, 0x91, 0x11, 0x41, 0x4f, 0x67, 0xdc, 0xea, 0x97, 0xf2, 0xcf, 0xce, 0xf0, 0xb4, 0xe6, 0x73,
+		0x96, 0xac, 0x74, 0x22, 0xe7, 0xad, 0x35, 0x85, 0xe2, 0xf9, 0x37, 0xe8, 0x1c, 0x75, 0xdf, 0x6e,
+		0x47, 0xf1, 0x1a, 0x71, 0x1d, 0x29, 0xc5, 0x89, 0x6f, 0xb7, 0x62, 0x0e, 0xaa, 0x18, 0xbe, 0x1b,
+		0xfc, 0x56, 0x3e, 0x4b, 0xc6, 0xd2, 0x79, 0x20, 0x9a, 0xdb, 0xc0, 0xfe, 0x78, 0xcd, 0x5a, 0xf4,
+		0x1f, 0xdd, 0xa8, 0x33, 0x88, 0x07, 0xc7, 0x31, 0xb1, 0x12, 0x10, 0x59, 0x27, 0x80, 0xec, 0x5f,
+		0x60, 0x51, 0x7f, 0xa9, 0x19, 0xb5, 0x4a, 0x0d, 0x2d, 0xe5, 0x7a, 0x9f, 0x93, 0xc9, 0x9c, 0xef,
+		0xa0, 0xe0, 0x3b, 0x4d, 0xae, 0x2a, 0xf5, 0xb0, 0xc8, 0xeb, 0xbb, 0x3c, 0x83, 0x53, 0x99, 0x61,
+		0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d
+	};
 
 	template<uint8_t block_size, uint8_t key_size>
 	constexpr uint8_t getRoundCount() {
@@ -167,10 +186,10 @@ namespace aes {
 			std::swap((*_block)[ 2], (*_block)[10]);
 			std::swap((*_block)[ 6], (*_block)[14]);
 			// Row 3 shift by 3
-			std::swap((*_block)[15], (*_block)[11]);
-			std::swap((*_block)[11], (*_block)[ 7]);
-			std::swap((*_block)[ 7], (*_block)[ 3]);
-		} else if (block_size == 6) {
+			std::swap((*_block)[ 3], (*_block)[ 7]);
+			std::swap((*_block)[ 3], (*_block)[11]);
+			std::swap((*_block)[ 3], (*_block)[15]);
+		} else if constexpr (block_size == 6) {
 			// 00, 04, 08, 12, 16, 20		00, 04, 08, 12, 16, 20
 			// 01, 05, 09, 13, 17, 21	=>	05, 09, 13, 17, 21, 01
 			// 02, 06, 10, 14, 18, 22		10, 14, 18, 22, 02, 06
@@ -191,7 +210,7 @@ namespace aes {
 			std::swap((*_block)[ 3], (*_block)[15]);
 			std::swap((*_block)[ 7], (*_block)[19]);
 			std::swap((*_block)[11], (*_block)[23]);
-		} else if (block_size == 8) {
+		} else if constexpr (block_size == 8) {
 			// 00, 04, 08, 12, 16, 20, 24, 28		00, 04, 08, 12, 16, 20, 24, 28
 			// 01, 05, 09, 13, 17, 21, 25, 29	=>	05, 09, 13, 17, 21, 25, 29, 01
 			// 02, 06, 10, 14, 18, 22, 26, 30		14, 18, 22, 26, 30, 02, 06, 10
@@ -206,13 +225,13 @@ namespace aes {
 			std::swap((*_block)[ 1], (*_block)[ 9]);
 			std::swap((*_block)[ 1], (*_block)[ 5]);
 			// Row 2 shift by 3
-			std::swap((*_block)[2], (*_block)[22]);
-			std::swap((*_block)[2], (*_block)[10]);
-			std::swap((*_block)[2], (*_block)[30]);
-			std::swap((*_block)[2], (*_block)[18]);
-			std::swap((*_block)[2], (*_block)[ 6]);
-			std::swap((*_block)[2], (*_block)[26]);
-			std::swap((*_block)[2], (*_block)[14]);
+			std::swap((*_block)[ 2], (*_block)[22]);
+			std::swap((*_block)[ 2], (*_block)[10]);
+			std::swap((*_block)[ 2], (*_block)[30]);
+			std::swap((*_block)[ 2], (*_block)[18]);
+			std::swap((*_block)[ 2], (*_block)[ 6]);
+			std::swap((*_block)[ 2], (*_block)[26]);
+			std::swap((*_block)[ 2], (*_block)[14]);
 			// Row 3 shift by 4
 			std::swap((*_block)[ 3], (*_block)[19]);
 			std::swap((*_block)[ 7], (*_block)[23]);
@@ -374,31 +393,156 @@ namespace aes {
 		else throw std::runtime_error("Key must have 128, 192, or 256 bits.");
 	}
 
-	template<uint8_t block_size, uint8_t key_size>
-	inline void _decryptBlock(
-		std::array<uint8_t, 4 * block_size>* _block,
-		std::array<uint8_t, 4 * key_size>* _key
-	) {
-
+	template<uint8_t block_size>
+	void inverseShiftRows(std::array<uint8_t, 4 * block_size>* _block) {
+		if constexpr (block_size == 4) {
+			// 00, 04, 08, 12		00, 04, 08, 12
+			// 01, 05, 09, 13	=>	13, 01, 05, 09
+			// 02, 06, 10, 14		10, 14, 02, 06
+			// 03, 07, 11, 15		07, 11, 15, 03
+			// Row 0 does nothing
+			// Row 1 shift by 1
+			std::swap((*_block)[13], (*_block)[ 1]);
+			std::swap((*_block)[13], (*_block)[ 5]);
+			std::swap((*_block)[13], (*_block)[ 9]);
+			// Row 2 shift by 2
+			std::swap((*_block)[ 2], (*_block)[10]);
+			std::swap((*_block)[ 6], (*_block)[14]);
+			// Row 3 shift by 3
+			std::swap((*_block)[ 3], (*_block)[15]);
+			std::swap((*_block)[ 3], (*_block)[11]);
+			std::swap((*_block)[ 3], (*_block)[ 7]);
+		} else if constexpr (block_size == 6) {
+			// 00, 04, 08, 12, 16, 20		00, 04, 08, 12, 16, 20
+			// 01, 05, 09, 13, 17, 21	=>	21, 01, 05, 09, 13, 17
+			// 02, 06, 10, 14, 18, 22		18, 22, 02, 06, 10, 14
+			// 03, 07, 11, 15, 19, 23		15, 19, 23, 03, 07, 11
+			// Row 0 does nothing
+			// Row 1 shift by 1
+			std::swap((*_block)[21], (*_block)[ 1]);
+			std::swap((*_block)[21], (*_block)[ 5]);
+			std::swap((*_block)[21], (*_block)[ 9]);
+			std::swap((*_block)[21], (*_block)[13]);
+			std::swap((*_block)[21], (*_block)[17]);
+			// Row 2 shift by 2
+			std::swap((*_block)[ 2], (*_block)[10]);
+			std::swap((*_block)[ 2], (*_block)[18]);
+			std::swap((*_block)[ 6], (*_block)[14]);
+			std::swap((*_block)[ 6], (*_block)[22]);
+			// Row 3 shift by 3
+			std::swap((*_block)[ 3], (*_block)[15]);
+			std::swap((*_block)[ 7], (*_block)[19]);
+			std::swap((*_block)[11], (*_block)[23]);
+		} else if constexpr (block_size == 8) {
+			// 00, 04, 08, 12, 16, 20, 24, 28		00, 04, 08, 12, 16, 20, 24, 28
+			// 01, 05, 09, 13, 17, 21, 25, 29	=>	29, 01, 05, 09, 13, 17, 21, 25
+			// 02, 06, 10, 14, 18, 22, 26, 30		22, 26, 30, 02, 06, 10, 14, 18
+			// 03, 07, 11, 15, 19, 23, 27, 31		19, 23, 27, 31, 03, 07, 11, 15
+			// Row 0 does nothing
+			// Row 1 shift by 1
+			std::swap((*_block)[29], (*_block)[ 1]);
+			std::swap((*_block)[29], (*_block)[ 5]);
+			std::swap((*_block)[29], (*_block)[ 9]);
+			std::swap((*_block)[29], (*_block)[13]);
+			std::swap((*_block)[29], (*_block)[17]);
+			std::swap((*_block)[29], (*_block)[21]);
+			std::swap((*_block)[29], (*_block)[25]);
+			// Row 2 shift by 3
+			std::swap((*_block)[ 2], (*_block)[14]);
+			std::swap((*_block)[ 2], (*_block)[26]);
+			std::swap((*_block)[ 2], (*_block)[ 6]);
+			std::swap((*_block)[ 2], (*_block)[18]);
+			std::swap((*_block)[ 2], (*_block)[30]);
+			std::swap((*_block)[ 2], (*_block)[10]);
+			std::swap((*_block)[ 2], (*_block)[22]);
+			// Row 3 shift by 4
+			std::swap((*_block)[ 3], (*_block)[19]);
+			std::swap((*_block)[ 7], (*_block)[23]);
+			std::swap((*_block)[11], (*_block)[27]);
+			std::swap((*_block)[15], (*_block)[31]);
+		}
 	}
 
-	template<uint8_t key_size>
-	void _decrypt(std::istream& _input_cypher, std::ostream& _output_data, std::istream& _key) {
-		std::array<uint8_t, 4 * key_size> key = prepareKey<key_size>(_key);
+	template<uint8_t block_size>
+	void inverseByteSubstitution(std::array<uint8_t, 4 * block_size>* _block) {
+		for (uint8_t i = 0; i < 4 * block_size; i++) {
+			(*_block)[i] = rijndael_inverse_substitution_box[(*_block)[i]];
+		}
+	}
 
-		do {
-			std::array<uint8_t, 16> cypher;
-			size_t read = _input_cypher.readsome(reinterpret_cast<char*>(cypher.data()), 16);
-			if (read != 16) throw std::runtime_error("Internal error: didn't read enough caracters. (0x02)");
-			_decryptBlock<4, key_size>(&cypher, &key);
-			uint8_t writing = 16;
-			if (_input_cypher.eof()) {
-				for (uint8_t i = 15; i > 0; i--) {
-					if (cypher[i] == 0 && cypher[i - 1] != 0) writing--;
+	template<uint8_t block_size>
+	void inverseMixColumns(std::array<uint8_t, 4 * block_size>* _block) {
+		std::array<uint8_t, 4> cx = {
+			0x0e, 0x09, 0x0d, 0x0b
+		};
+		for (uint64_t i = 0; i < block_size; i++) {
+			std::array<uint8_t, 4> temp = gfMultiplication(
+				cx,
+				std::array<uint8_t, 4>{
+					(*_block)[(i * 4) + 0],
+					(*_block)[(i * 4) + 1],
+					(*_block)[(i * 4) + 2],
+					(*_block)[(i * 4) + 3]
 				}
-			}
-			_output_data.write(reinterpret_cast<char*>(cypher.data()), writing);
-		} while (_input_cypher.good());
+			);
+			(*_block)[(i * 4) + 0] = temp[0];
+			(*_block)[(i * 4) + 1] = temp[1];
+			(*_block)[(i * 4) + 2] = temp[2];
+			(*_block)[(i * 4) + 3] = temp[3];
+		}
+	}
+	
+	template<uint8_t block_size>
+	void inverseRound(std::array<uint8_t, 4 * block_size>* _block, std::array<uint8_t, 4 * block_size>* _round_key, bool final_round = false) {
+		addRoundKey<block_size>(_block, _round_key);
+		if (!final_round) inverseMixColumns<block_size>(_block);
+		inverseShiftRows<block_size>(_block);
+		inverseByteSubstitution<block_size>(_block);
+	}
+
+	template<uint8_t block_size, uint8_t round_count>
+	inline void _decryptBlock(
+		std::array<uint8_t, 4 * block_size>* _block,
+		std::array<uint8_t, 4 * block_size * (round_count + 1)>* _exp_key
+	) {
+		std::array<uint8_t, 4 * block_size> round_key;
+		std::memcpy(round_key.data(), _exp_key->data() + (round_count * 4 * block_size), 4 * block_size);
+		inverseRound<block_size>(_block, &round_key, true);
+
+		for (uint64_t i = round_count - 1; i > 0; i--) {
+			std::memcpy(round_key.data(), _exp_key->data() + (i * 4 * block_size), 4 * block_size);
+			inverseRound<block_size>(_block, &round_key);
+		}
+
+		std::memcpy(round_key.data(), _exp_key->data(), 4 * block_size);
+		addRoundKey<block_size>(_block, &round_key);
+	}
+
+	template<uint8_t block_size, uint8_t key_size>
+	void _decrypt(std::istream& _input_cypher, std::ostream& _output_data, std::istream& _key) {
+		constexpr uint8_t round_count = getRoundCount<block_size, key_size>();
+
+		std::array<uint8_t, 4 * key_size> key = prepareKey<key_size>(_key);
+		std::array<uint8_t, 4 * block_size * (round_count + 1)> expanded_key = keyExpansion<block_size * (round_count + 1), key_size>(&key);
+
+		std::streampos cypher_length;
+		_input_cypher.seekg(0, std::ios::end);
+		cypher_length = _input_cypher.tellg();
+		_input_cypher.seekg(0, std::ios::beg);
+
+		while (cypher_length > 0) {
+			size_t read_count = cypher_length > 4 * block_size ? 4 * block_size : cypher_length;
+
+			std::array<uint8_t, 4 * block_size> data;
+			data.fill(0);
+			size_t read = _input_cypher.readsome(reinterpret_cast<char*>(data.data()), read_count);
+			if (read != read_count) throw std::runtime_error("Internal error: didn't read enough caracters. (0x02)");
+
+			_decryptBlock<block_size, round_count>(&data, &expanded_key);
+			_output_data.write(reinterpret_cast<char*>(data.data()), 4 * block_size);
+
+			cypher_length -= read_count;
+		}
 	}
 
 	void decrypt(std::istream& _input_cypher, std::ostream& _output_data, std::istream& _key) {
@@ -407,9 +551,9 @@ namespace aes {
 		key_size = _key.tellg();
 		_key.seekg(0, std::ios::beg);
 
-		if (key_size == 16) _decrypt<4>(_input_cypher, _output_data, _key);
-		else if (key_size == 24) _decrypt<6>(_input_cypher, _output_data, _key);
-		else if (key_size == 32) _decrypt<8>(_input_cypher, _output_data, _key);
+		if (key_size == 16) _decrypt<4, 4>(_input_cypher, _output_data, _key);
+		else if (key_size == 24) _decrypt<4, 6>(_input_cypher, _output_data, _key);
+		else if (key_size == 32) _decrypt<4, 8>(_input_cypher, _output_data, _key);
 		else throw std::runtime_error("Key must have 128, 192, or 256 bits.");
 	}
 
