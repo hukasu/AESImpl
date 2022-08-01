@@ -1,2 +1,7 @@
+# Cmake
 out/
+build/
+CMakeSettings.json
+
+# Visual Code
 .vs/
