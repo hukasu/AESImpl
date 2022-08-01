@@ -24,7 +24,8 @@ int main(int argc, char** argv) {
 		std::cerr << "Incorrent number of arguments." << std::endl;
 		printHelp(argv[0]);
 		return 1;
-	} else if (std::strcmp(argv[1], "-d") || std::strcmp(argv[1], "--decrypt") || std::strcmp(argv[1], "-e") || std::strcmp(argv[1], "--encrypt")) {
+	} else if (std::strcmp(argv[1], "-d") && std::strcmp(argv[1], "--decrypt") && std::strcmp(argv[1], "-e") && std::strcmp(argv[1], "--encrypt")) {
+		// std::strcmp returns zero on equal strings, so a single zero result is due to valid mode
 		std::cerr << "Invalid mode." << std::endl;
 		printHelp(argv[0]);
 		return 1;
