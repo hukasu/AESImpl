@@ -4,4 +4,7 @@ build/
 CMakeSettings.json
 
 # Visual Code
+.vscode/
+
+# Visual Studio
 .vs/
